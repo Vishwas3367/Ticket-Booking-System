@@ -16,7 +16,7 @@ Two browsers must not both hold or book the same seat. Availability checks alone
 
 For each requested id the statement is: `updateMany where id AND eventId AND status = AVAILABLE`. If `count !== 1`, the transaction throws and rolls back, including any seats already flipped in that attempt. The client gets HTTP 409 and refreshes the map.
 
-Booking uses the same idea: only seats still `HELD` by **this user** become `BOOKED`. A racing expiry or a second device cannot convert a seat they no longer hold. SQLite serializes writers; PostgreSQL would add row locks. The `WHERE status = …` predicate is what makes simultaneous attempts fail-closed on either engine.
+Booking uses the same idea: only seats still `HELD` by **this user** become `BOOKED`. A racing expiry or a second device cannot convert a seat they no longer hold. PostgreSQL provides transactional isolation and row-level locking, while the conditional `WHERE status = ...` predicate makes simultaneous attempts fail-closed.
 
 ## Waitlist auto-assignment
 
