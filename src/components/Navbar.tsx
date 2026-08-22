@@ -19,9 +19,9 @@ export default function Navbar() {
 
   const links = [
     { href: "/", label: "Events" },
-    ...(user?.role === "CUSTOMER" || user?.role === "ADMIN"
-      ? [{ href: "/bookings", label: "My tickets" }]
-      : []),
+    ...(user?.role === "CUSTOMER"
+  ? [{ href: "/bookings", label: "My tickets" }]
+  : []),
     ...(user?.role === "ORGANISER" || user?.role === "ADMIN"
       ? [{ href: "/organiser", label: "Organiser" }]
       : []),
