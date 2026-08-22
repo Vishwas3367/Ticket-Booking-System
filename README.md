@@ -1,11 +1,12 @@
-Yes. Here is your **same old README**, with only the outdated parts changed for your current **Neon PostgreSQL setup** and the ZIP command fixed. I have not added extra sections.
-
-````markdown
 # TicketBox — Ticket Booking System
 
 Web app for movies and concerts: visual seat maps, time-limited holds, waitlists with auto-assignment on cancellation, and QR tickets by email.
 
-Built from the *Ticket Booking System* specification (roles, holds, concurrency, waitlist offers, QR email).
+Built from the **Ticket Booking System** specification (roles, holds, concurrency, waitlist offers, QR email).
+
+## Live Demo
+
+https://ticket-booking-system-chi-ruddy.vercel.app/
 
 ## Stack
 
@@ -18,13 +19,19 @@ Built from the *Ticket Booking System* specification (roles, holds, concurrency,
 
 ```bash
 cp .env.example .env
+
 npm install
+
 npx prisma migrate dev
+
 npm run db:seed
+
 npm run dev
 ````
 
-Open [http://localhost:3000](http://localhost:3000).
+Open:
+
+[http://localhost:3000](http://localhost:3000)
 
 ### Demo accounts
 
@@ -49,39 +56,35 @@ See `.env.example`.
 | `WAITLIST_OFFER_SECONDS` | Waitlist offer lifetime                                                                                                     |
 | `APP_URL`                | Used in waitlist email links                                                                                                |
 | `CRON_SECRET`            | Bearer token for `/api/cron/expire`                                                                                         |
-| `SMTP_*` / `EMAIL_FROM`  | Optional SMTP. If `SMTP_HOST` is empty, emails are logged to the server console; QR tickets still appear in **My tickets**. |
+| `SMTP_*` / `EMAIL_FROM`  | Optional SMTP. If `SMTP_HOST` is empty, emails are logged to the server console; QR tickets still appear in **My Tickets**. |
 
 ## Hosting
 
 1. Push the repo to GitHub.
 
-2. Create a Vercel, Render, or Railway project from the repo.
+2. Create a Vercel project from the repository.
 
 3. Set the production environment variables, including `DATABASE_URL` for the Neon PostgreSQL database, `JWT_SECRET`, `APP_URL`, `CRON_SECRET`, and the SMTP/email variables.
 
 4. Deploy the application.
 
-5. Schedule `GET /api/cron/expire` every minute (Vercel Cron, Render cron, or Railway cron) with `Authorization: Bearer $CRON_SECRET`.
+5. The production application is hosted on Vercel and uses PostgreSQL via Prisma and Neon for persistent database storage.
 
-The application uses PostgreSQL via Prisma and Neon for persistent database storage.
-
-Holds also expire on every seat/book/cancel request, so the app works without cron; cron is extra insurance.
+Holds also expire on every seat/book/cancel request, so the application can enforce the hold TTL without depending entirely on a scheduled cron job.
 
 ## Docs in this repo
 
 * [docs/API.md](docs/API.md) — HTTP API
-
 * [docs/SCHEMA.md](docs/SCHEMA.md) — database schema
-
 * [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) — holds, concurrency, waitlist (≤ 800 words)
 
 ## Seat hold and waitlist (short)
 
-1. Selecting seats runs a transaction: each seat is updated **only if** `status = AVAILABLE`. If any update affects 0 rows, the whole hold rolls back (concurrency).
+1. Selecting seats runs a transaction: each seat is updated **only if** `status = AVAILABLE`. If any update affects 0 rows, the whole hold rolls back, preventing concurrent customers from holding the same seat.
 
-2. Holds store `heldUntil`. Reads and a cron job set expired `HELD` seats back to `AVAILABLE` (abandonment / TTL).
+2. Holds store `heldUntil`. Expired `HELD` seats can be released back to `AVAILABLE` during subsequent seat, booking, or cancellation requests, enforcing the configured TTL when a customer abandons checkout.
 
-3. Sold-out categories can join a FIFO waitlist. Cancellation frees seats and offers the next waiter a time-limited link; missed offers go to the next in line.
+3. Sold-out categories can join a FIFO waitlist. Cancellation frees seats and offers the next waiter a time-limited link; missed or expired offers go to the next customer in line.
 
 ## Zip deliverable
 
@@ -95,16 +98,4 @@ zip -r TicketBox-source.zip "Ticket Booking System" \
   -x "*/.git/*"
 ```
 
-```
-
-### Now this README is consistent with your current project
-
-The important corrections are:
-
-- `SQLite` → **PostgreSQL via Prisma + Neon**
-- Setup no longer creates a new migration with `--name init`
-- `DATABASE_URL` description → **Neon PostgreSQL**
-- Hosting no longer tells the user to convert SQLite to PostgreSQL
-- ZIP excludes your **`.env`** and **`.git`**
-- Your existing seat-hold, concurrency, and waitlist explanation remains unchanged.
-```
+````
