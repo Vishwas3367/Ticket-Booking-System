@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TicketBox — Ticket Booking System
 
-## Getting Started
+Web app for movies and concerts: visual seat maps, time-limited holds, waitlists with auto-assignment on cancellation, and QR tickets by email.
 
-First, run the development server:
+Built from the *Ticket Booking System* specification (roles, holds, concurrency, waitlist offers, QR email).
+
+## Stack
+
+- **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
+- **Backend:** Next.js Route Handlers
+- **Database:** SQLite via Prisma (swap `DATABASE_URL` to PostgreSQL for production)
+- **Auth:** JWT in an HTTP-only cookie; roles `CUSTOMER`, `ORGANISER`, `ADMIN`
+
+## Setup
 
 ```bash
+cp .env.example .env
+npm install
+npx prisma migrate dev --name init
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Demo accounts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Role | Email | Password |
+|---|---|---|
+| Customer | customer@ticketbox.local | Customer123! |
+| Waitlist demo | waiter@ticketbox.local | Customer123! |
+| Organiser | organiser@ticketbox.local | Organiser123! |
+| Admin | admin@ticketbox.local | Admin123! |
 
-## Learn More
+`Sold-Out Short Film` is fully booked with Jordan already on the STANDARD waitlist. Cancel Alex's booking as the customer to trigger an offer email (logged to the console if SMTP is unset).
 
-To learn more about Next.js, take a look at the following resources:
+## Environment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+See `.env.example`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Prisma connection (`file:./dev.db` locally) |
+| `JWT_SECRET` | Signs session tokens |
+| `HOLD_TTL_SECONDS` | Seat hold lifetime (default 600 = 10 minutes) |
+| `WAITLIST_OFFER_SECONDS` | Waitlist offer lifetime |
+| `APP_URL` | Used in waitlist email links |
+| `CRON_SECRET` | Bearer token for `/api/cron/expire` |
+| `SMTP_*` / `EMAIL_FROM` | Optional SMTP. If `SMTP_HOST` is empty, emails are logged to the server console; QR tickets still appear in **My tickets**. |
 
-## Deploy on Vercel
+## Hosting
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push the repo to GitHub.
+2. Create a [Vercel](https://vercel.com), [Render](https://render.com), or [Railway](https://railway.app) project from the repo.
+3. For production, set `DATABASE_URL` to PostgreSQL, change the Prisma `provider` in `prisma/schema.prisma` from `sqlite` to `postgresql`, run migrations, then seed.
+4. Set `JWT_SECRET`, `APP_URL`, SMTP (or Resend SMTP), and `CRON_SECRET`.
+5. Schedule `GET /api/cron/expire` every minute (Vercel Cron, Render cron, or Railway cron) with `Authorization: Bearer $CRON_SECRET`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Holds also expire on every seat/book/cancel request, so the app works without cron; cron is extra insurance.
+
+## Docs in this repo
+
+- [docs/API.md](docs/API.md) — HTTP API
+- [docs/SCHEMA.md](docs/SCHEMA.md) — database schema
+- [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) — holds, concurrency, waitlist (≤ 800 words)
+
+## Seat hold and waitlist (short)
+
+1. Selecting seats runs a transaction: each seat is updated **only if** `status = AVAILABLE`. If any update affects 0 rows, the whole hold rolls back (concurrency).
+2. Holds store `heldUntil`. Reads and a cron job set expired `HELD` seats back to `AVAILABLE` (abandonment / TTL).
+3. Sold-out categories can join a FIFO waitlist. Cancellation frees seats and offers the next waiter a time-limited link; missed offers go to the next in line.
+
+## Zip deliverable
+
+From the project parent folder:
+
+```bash
+cd "/Users/vishwaskumar/Documents/project"
+zip -r TicketBox-source.zip "Ticket Booking System" -x "*/node_modules/*" -x "*/.next/*" -x "*/prisma/dev.db"
+```

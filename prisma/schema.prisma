@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("CUSTOMER")
+  createdAt    DateTime @default(now())
+
+  organisedEvents Event[]          @relation("OrganiserEvents")
+  venues          Venue[]
+  bookings        Booking[]
+  heldSeats       ShowSeat[]
+  waitlistEntries WaitlistEntry[]
+  waitlistOffers  WaitlistOffer[]
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  rows      Int
+  cols      Int
+  adminId   String
+  createdAt DateTime @default(now())
+
+  admin  User   @relation(fields: [adminId], references: [id])
+  seats  Seat[]
+  events Event[]
+}
+
+model Seat {
+  id       String @id @default(cuid())
+  venueId  String
+  row      Int
+  col      Int
+  label    String
+  category String
+
+  venue     Venue      @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  showSeats ShowSeat[]
+
+  @@unique([venueId, row, col])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  organiserId String
+  venueId     String
+  title       String
+  type        String
+  description String
+  startsAt    DateTime
+  createdAt   DateTime @default(now())
+
+  organiser User          @relation("OrganiserEvents", fields: [organiserId], references: [id])
+  venue     Venue         @relation(fields: [venueId], references: [id])
+  prices    EventPrice[]
+  showSeats ShowSeat[]
+  bookings  Booking[]
+  waitlist  WaitlistEntry[]
+  offers    WaitlistOffer[]
+}
+
+model EventPrice {
+  id       String @id @default(cuid())
+  eventId  String
+  category String
+  price    Int
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, category])
+}
+
+model ShowSeat {
+  id           String    @id @default(cuid())
+  eventId      String
+  seatId       String
+  status       String    @default("AVAILABLE")
+  heldByUserId String?
+  heldUntil    DateTime?
+  bookingId    String?
+
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  seat     Seat     @relation(fields: [seatId], references: [id])
+  heldBy   User?    @relation(fields: [heldByUserId], references: [id])
+  booking  Booking? @relation(fields: [bookingId], references: [id])
+
+  @@unique([eventId, seatId])
+  @@index([eventId, status])
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  reference String   @unique
+  userId    String
+  eventId   String
+  status    String   @default("CONFIRMED")
+  total     Int
+  createdAt DateTime @default(now())
+
+  user  User       @relation(fields: [userId], references: [id])
+  event Event      @relation(fields: [eventId], references: [id])
+  seats ShowSeat[]
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  category  String
+  status    String   @default("WAITING")
+  queuedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user   User            @relation(fields: [userId], references: [id])
+  event  Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  offers WaitlistOffer[]
+
+  @@index([eventId, category, status, queuedAt])
+}
+
+model WaitlistOffer {
+  id              String   @id @default(cuid())
+  token           String   @unique
+  waitlistEntryId String
+  eventId         String
+  userId          String
+  category        String
+  showSeatIds     String
+  expiresAt       DateTime
+  status          String   @default("OFFERED")
+  createdAt       DateTime @default(now())
+
+  waitlistEntry WaitlistEntry @relation(fields: [waitlistEntryId], references: [id], onDelete: Cascade)
+  event         Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id])
+}
