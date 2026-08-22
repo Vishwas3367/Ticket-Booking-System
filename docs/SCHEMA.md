@@ -1,6 +1,6 @@
 # Database schema
 
-SQLite (Prisma). Production: set `provider = "postgresql"` and a Postgres `DATABASE_URL`.
+PostgreSQL via Prisma and Neon. The Prisma datasource uses `provider = "postgresql"` with a PostgreSQL `DATABASE_URL`.
 
 ## Tables
 
