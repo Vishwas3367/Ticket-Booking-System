@@ -91,3 +91,36 @@ export async function sendWaitlistOfferEmail(params: {
     html,
   });
 }
+export async function sendCancellationEmail(params: {
+  to: string;
+  name: string;
+  eventTitle: string;
+  seats: string[];
+  reference: string;
+}) {
+  const html = `
+    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1208">
+      <h1 style="color:#7c2d12">Your TicketBox booking was cancelled</h1>
+
+      <p>Hi ${params.name},</p>
+
+      <p>Your ticket booking has been successfully cancelled.</p>
+
+      <p>
+        <strong>${params.eventTitle}</strong><br/>
+        Seats: ${params.seats.join(", ")}<br/>
+        Reference: <strong>${params.reference}</strong>
+      </p>
+
+      <p>The seats have been released successfully.</p>
+
+      <p>Thank you for using TicketBox.</p>
+    </div>
+  `;
+
+  return send({
+    to: params.to,
+    subject: `Booking cancelled · ${params.reference}`,
+    html,
+  });
+}
